@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# This script is invoked each time data has been accepted by the repository.
+# It then updates, creates or deletes the working copy of the respective
+#
+export PATH="/opt/ruby/bin:$PATH"
+
+SCRIPTS_DIR="/home/git/scripts"
+CREATE_WC_CMD="create_wc.sh"
+UPDATE_WC_CMD="update_wc.sh"
+DELETE_WC_CMD="delete_wc.sh"
+
+WCS_DIR="$1"
+#
+# *_wc
+#
+# All three functions update, create or delete the working copy of the
+# specified branch. They all expect the name of the branch as their first
+# parameter.
+#
+# @param    $1  name of the directory on hg.bingzhe.intra
+# @param    $2  project name
+#
+function generate_script() {
+    script=/home/git/tmp/${RANDOM}.sh
+    echo "${1}" > $script
+    chmod 777 $script
+}
+
+function update_wc() {
+    echo "Updating branch $2 for $1"
+    generate_script "${SCRIPTS_DIR}/${UPDATE_WC_CMD} ${1} ${2} ${USER} ${WCS_DIR}"
+}
+function create_wc() {
+    echo "Creating branch $2 for $1"
+    generate_script "${SCRIPTS_DIR}/${CREATE_WC_CMD} ${1} ${2} ${USER} ${WCS_DIR}"
+}
+function delete_wc() {
+    echo "Deleting branch $2 for $1"
+    generate_script "${SCRIPTS_DIR}/${DELETE_WC_CMD} ${1} ${2} ${USER} ${WCS_DIR}"
+}
+
+while read oval nval ref; do
+    branch=$(basename "${ref}")
+    #echo "${oval} ${nval} ${ref}" | git-commit-notifier "/home/git/git-notifier-config.yml"
+
+    if expr "${oval}" : "0*$" >/dev/null; then
+        create_wc "${PROJECT_NAME}" "${branch}"
+    elif expr "${nval}" : "0*$" > /dev/null; then
+        delete_wc "${PROJECT_NAME}" "${branch}"
+    else
+        update_wc "${PROJECT_NAME}" "${branch}"
+    fi
+done
+
