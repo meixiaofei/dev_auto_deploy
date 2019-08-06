@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # This script is invoked each time data has been accepted by the repository.
 # It then updates, creates or deletes the working copy of the respective
@@ -10,7 +10,8 @@ CREATE_WC_CMD="create_wc.sh"
 UPDATE_WC_CMD="update_wc.sh"
 DELETE_WC_CMD="delete_wc.sh"
 
-WCS_DIR="$1"
+PROJECT_NAME="$1"
+WCS_DIR="/home/git-web/$1"
 #
 # *_wc
 #

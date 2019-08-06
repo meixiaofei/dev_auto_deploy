@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+
+TMP_DIR=$(mktemp -d)
+
+# Colors
+COLOR_END='\033[0m'
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+PURPLE='\033[35m'
+
+# Count
+errors_count=0
+
+# Msg
+msg=''
+
+function phplint() {
+    tmp_file=$1
+    file=$2
+
+    # Grammar check
+    grammar_lint=$(php -l $tmp_file 2>&1 | sed -n '1,1p' | egrep -v 'No syntax')
+    if [[ $grammar_lint != '' ]]; then
+        let "errors_count = errors_count + 1"
+        # Msg
+        msg="$msg${YELLOW}Error file: ${file}, at line${grammar_lint##*line}${COLOR_END}\n"
+        msg="$msg${RED}${grammar_lint}${COLOR_END}\n"
+    else
+        # PSR check
+        output=$(phpcs --standard=PSR2 -n $tmp_file)
+        error=$(echo $output | egrep '([0-9]+) ERROR' | egrep '[0-9]+')
+
+        if [[ $error > 0 ]]; then
+            # Msg
+            msg="$msg${YELLOW}Error file: ${file}${COLOR_END}\n"
+            msg="$msg${RED}${error} errors${COLOR_END}\n"
+
+            let "errors_count = errors_count + 1"
+        fi
+    fi
+}
+
+function jslint() {
+    tmp_file=$1
+    file=$2
+
+    e=$(eslint -c eslint.json $tmp_file)
+    if [[ "$e" != *"0 problems"* ]]; then
+        msg="$msg${RED}ERROR: Check eslint hints.${COLOR_END}\n"
+    fi
+}
+
+while read oval nval ref; do
+    # Only check for update
+    if expr "${oval}" : "0*$" >/dev/null; then
+        :
+    else
+        echo -e "${PURPLE}Code check start:${COLOR_END}"
+        for line in $(git diff-tree -r $oval..$nval | egrep '\.(php|js)' | awk '{print $5$6}')
+        do
+            status=$(echo $line|cut -c1-1)
+            # A: added
+            # M: modified
+            # D: deleted
+            if [[ $status == 'D' ]]; then
+                continue
+            fi
+
+            file=$(echo $line | sed 's/^.//')
+            ext=${file##*.}
+            tmp_file="$TMP_DIR/$file"
+            git show $nval:$file > $tmp_file
+
+            case $ext in
+                php)
+                    phplint $tmp_file $file
+                    ;;
+                jsxx)
+                    jslint $tmp_file $file
+                    ;;
+            esac
+        done
+    fi
+done
+
+rm -rf $TMP_DIR
+
+if [[ $errors_count == 0 ]]; then
+    echo -e "${GREEN}$(cowsay 'Code check passed.')${COLOR_END}"
+else
+    echo -e "${PURPLE}Errors count: ${errors_count}${COLOR_END}"
+    echo -e "$(cowsay -f dragon $msg)"
+    exit 1
+fi
+
+exit 0

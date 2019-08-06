@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 HELP="Usage: $(basename $0) project_name branch_name git_user wcs_dir"
 
