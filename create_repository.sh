@@ -6,6 +6,13 @@ if [ -z $1 ]; then
     exit 1;
 fi
 
+color_upper=$(echo $repository_name | egrep --color '[A-Z]')
+if [ $color_upper ]; then
+    echo "Repository name can not include capital letter."
+    echo "What you just typed is: $color_upper"
+    exit 1
+fi
+
 if [ -d ${repository_name} ]; then
     echo "The same repository already exist, please check carefully."
     exit 1;
