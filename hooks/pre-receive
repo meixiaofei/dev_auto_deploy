@@ -68,9 +68,9 @@ while read oval nval ref; do
                 continue
             fi
 
-            file=$(echo $line | sed 's/^.//')
+            file=${line:1}
             ext=${file##*.}
-            tmp_file="$TMP_DIR/$file"
+            tmp_file=$TMP_DIR/${RANDOM}.$ext
             git show $nval:$file > $tmp_file
 
             case $ext in
