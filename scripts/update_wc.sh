@@ -10,9 +10,11 @@ elif [ "$1" = "--help" -o "$1" = "-h" ]; then
     exit 0
 fi
 
+project_name="$1"
 branch="$2"
 git_user="$3"
 WCS_DIR="$4"
+services_discovery_ini="/home/git/services_discovery.ini"
 
 #sudo chown -R git.git ${WCS_DIR}/${branch} 
 cd ${WCS_DIR}/${branch} 
@@ -25,6 +27,12 @@ if [ -f "pm2.json" ]; then
     pm2 restart ${pm2_name}
 fi
 [ -f "init" ] && php init --env=Development --overwrite=All
+if [ -f "pom.xml" ]; then
+    sh /home/git/scripts/sbm stop $project_name $branch
+    mvn package -Ptest
+    service_port=$(crudini --get "$services_discovery_ini" "$project_name" "$branch" 2>&1)
+    sh /home/git/scripts/sbm start $project_name $branch $service_port
+fi
 
 echo "Done"
 

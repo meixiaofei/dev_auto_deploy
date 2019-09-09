@@ -9,9 +9,11 @@ elif [ "$1" = "--help" -o "$1" = "-h" ]; then
     echo "${HELP}"
     exit 0
 fi
-
+project_name="$1"
 branch="$2"
 git_user="$3"
+services_discovery_ini="/home/git/services_discovery.ini"
+port_range="20000-25000"
 
 GIT="/usr/bin/git"
 REPOSITORY_DIR="/home/git/$1"
@@ -26,6 +28,21 @@ cd $branch
 [ -f "package.json" ] && npm install && npm run build
 [ -f "pm2.json" ] && npm run start:pm2 
 [ -f "init" ] && php init --env=Development --overwrite=All
+
+if [ -f "pom.xml" ]; then
+    mvn package -Ptest
+    service_port=$(crudini --get $services_discovery_ini $project_name $branch 2>&1)
+    re='^[0-9]+$'
+    if ! [[ $service_port =~ $re ]]; then
+        service_port=$(shuf -i $port_range -n 1)
+        if [[ $(nmap -sT -vv -p $port_range 127.0.0.1|grep $service_port|wc -l) > 0 ]]; then
+            service_port=$(shuf -i $port_range -n 1)
+        fi
+        echo "Service port is: $service_port"
+        crudini --set $services_discovery_ini $project_name $branch $service_port
+    fi
+    sh /home/git/scripts/sbm start $project_name $branch $service_port
+fi
 
 echo "Done"
 

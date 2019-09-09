@@ -1,0 +1,30 @@
+server {
+  listen       80;
+  server_name  ~^(?<branch>[^\.]+?)\.(?<project>[^\.]+?)\.services-discovery\.sunlands$;
+  root         /home/git-web/$project/$branch;
+  index        index.html index.htm;
+
+  location /upstream_list {
+     upstream_show;
+  }
+
+  location / {
+    default_type text/html;
+    #content_by_lua 'ngx.say("hello")';
+    #set_by_lua $port 'return os.execute("pwd")';
+
+    set_by_lua_block $port {
+      local handle = io.popen("/usr/bin/crudini --get /home/git/services_discovery.ini " .. ngx.var.project .. " " .. ngx.var.branch)
+      local result = handle:read("*a")
+      handle:close()
+      local normalisedString = string.gsub(result, "%s+", "")
+      return normalisedString
+    }
+    #default_type text/html;
+    #return 200 $port;
+    set $proxy_service http://127.0.0.1:$port;
+    #return 200 $proxy_service;
+    proxy_pass $proxy_service;
+  }
+
+}
